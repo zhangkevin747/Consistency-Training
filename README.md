@@ -2,6 +2,8 @@
 
 This is a small experiment that tests one idea from a larger consistency-training proposal.
 
+![What we are testing](assets/evaluation_figure.png)
+
 ## The idea being tested
 
 A "consistency reward" gives a model a higher score when it gives the same answer to
