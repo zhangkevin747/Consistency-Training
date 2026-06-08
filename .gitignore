@@ -1,0 +1,25 @@
+# python
+.venv/
+__pycache__/
+*.pyc
+
+# data + results (regenerable; can be large)
+data/rollouts/*.jsonl
+data/judgments/*.jsonl
+data/rewards/*.csv
+data/judgments/*.csv
+results/*.png
+
+# keep the generated question sets and correlation tables tracked? no by default:
+data/questions/*.jsonl
+results/*.csv
+
+# secrets
+.env
+
+# os / tmp
+.DS_Store
+/tmp/
+
+# generated selection tables
+data/questions/*.csv
