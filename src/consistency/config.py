@@ -102,7 +102,7 @@ ROLLOUT_BATCH_SIZE = 24                            # sequences per mlx_lm.batch_
 # judge sees the actual reasoning. Qwen-thinking sampling (temp 0.6) also cuts the number noise.
 OPENROUTER_MODEL = "qwen/qwen3-vl-8b-thinking"
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-OPENROUTER_CONCURRENCY = 16                        # parallel HTTP requests
+OPENROUTER_CONCURRENCY = int(os.environ.get("OPENROUTER_CONCURRENCY", "16"))  # parallel HTTP reqs
 OPENROUTER_MAX_TOKENS = 6000                       # generous: thinking traces are long
 OPENROUTER_SAMPLING = dict(temperature=0.6, top_p=0.95, top_k=20)  # Qwen-thinking recommended
 
@@ -128,27 +128,33 @@ PILOT_CAND_TYPE2 = 12
 PILOT_KEEP_TYPE2 = 8      # keep all that pass the violation screen, for power
 
 # ---------------------------------------------------------------- file names
+# A pilot run is tagged "_<RUN_TAG>" (default "pilot"); set RUN_TAG=val (etc.) in the env to keep
+# an independent out-of-sample set side by side. Full (non-pilot) runs are untagged.
+RUN_TAG = os.environ.get("RUN_TAG", "pilot")
+
+def _ptag(pilot: bool) -> str:
+    return f"_{RUN_TAG}" if pilot else ""
+
 def questions_file(qtype: int, pilot: bool = False) -> Path:
-    tag = "_pilot" if pilot else ""
-    return QUESTIONS_DIR / f"type{qtype}{tag}.jsonl"
+    return QUESTIONS_DIR / f"type{qtype}{_ptag(pilot)}.jsonl"
 
 def selection_file(pilot: bool = False) -> Path:
-    return QUESTIONS_DIR / ("selection_pilot.csv" if pilot else "selection.csv")
+    return QUESTIONS_DIR / f"selection{_ptag(pilot)}.csv"
 
 def rollouts_file(pilot: bool = False) -> Path:
-    return ROLLOUTS_DIR / ("rollouts_pilot.jsonl" if pilot else "rollouts.jsonl")
+    return ROLLOUTS_DIR / f"rollouts{_ptag(pilot)}.jsonl"
 
 def rewards_file(pilot: bool = False) -> Path:
-    return REWARDS_DIR / ("rewards_pilot.csv" if pilot else "rewards.csv")
+    return REWARDS_DIR / f"rewards{_ptag(pilot)}.csv"
 
 def judgments_file(pilot: bool = False) -> Path:
-    return JUDGMENTS_DIR / ("judgments_pilot.jsonl" if pilot else "judgments.jsonl")
+    return JUDGMENTS_DIR / f"judgments{_ptag(pilot)}.jsonl"
 
 def quality_file(pilot: bool = False) -> Path:
-    return JUDGMENTS_DIR / ("quality_pilot.csv" if pilot else "quality.csv")
+    return JUDGMENTS_DIR / f"quality{_ptag(pilot)}.csv"
 
 def correlation_file(pilot: bool = False) -> Path:
-    return RESULTS_DIR / ("correlation_pilot.csv" if pilot else "correlation.csv")
+    return RESULTS_DIR / f"correlation{_ptag(pilot)}.csv"
 
 def plot_file(pilot: bool = False) -> Path:
-    return RESULTS_DIR / ("correlation_pilot.png" if pilot else "correlation.png")
+    return RESULTS_DIR / f"correlation{_ptag(pilot)}.png"
