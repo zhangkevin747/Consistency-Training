@@ -2,8 +2,6 @@
 
 This is a small experiment that tests one idea from a larger consistency-training proposal.
 
-**Background:** [Redwood Research proposal](https://docs.google.com/document/d/1JkoAaxlFFMrnMnbv2HWsRd7-7wBJ2PUYat1EYsNYfWg/edit?tab=t.te8jxbwjwq5j#heading=h.ov29jgzf1iqd) · [my experiment design draft](https://docs.google.com/document/d/1BNkyUgl4XE97OjojfVLNR6aCnFjAlYGNziaRIr0DTnk/edit?tab=t.0#heading=h.ov29jgzf1iqd)
-
 ![What we are testing](assets/evaluation_figure.png)
 
 ## The idea being tested
