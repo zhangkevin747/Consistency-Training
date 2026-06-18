@@ -3,16 +3,10 @@
 __pycache__/
 *.pyc
 
-# data + results (regenerable; can be large)
-data/rollouts/*.jsonl
-data/judgments/*.jsonl
-data/rewards/*.csv
-data/judgments/*.csv
-results/*.png
-
-# keep the generated question sets and correlation tables tracked? no by default:
-data/questions/*.jsonl
-results/*.csv
+# data + results: NEVER track. Question sets derived from the acorn consistency
+# dataset (shared privately, password-protected) must not leak into the repo.
+data/
+results/
 
 # secrets
 .env
@@ -21,5 +15,6 @@ results/*.csv
 .DS_Store
 /tmp/
 
-# generated selection tables
-data/questions/*.csv
+# the acorn consistency dataset itself (private; do not commit in any form)
+acorn-dataset/
+acorn*.zip

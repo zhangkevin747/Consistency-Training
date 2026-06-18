@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Consistency Training — interactive explorer</title>
+<style>
+  :root{
+    --bg:#f7f7f5; --panel:#ffffff; --ink:#1c1c1e; --mut:#6b6b72; --line:#e3e3df;
+    --accent:#2b6cb0; --r1:#1f77b4; --r2:#ff7f0e; --r3:#2ca02c; --r4:#d62728;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+       color:var(--ink);background:var(--bg)}
+  header{padding:16px 24px;border-bottom:1px solid var(--line);background:var(--panel)}
+  header h1{margin:0;font-size:18px}
+  header p{margin:4px 0 0;color:var(--mut);font-size:13px;max-width:900px}
+  .tabs{display:flex;gap:6px;margin-top:12px}
+  .tab{padding:7px 14px;border:1px solid var(--line);border-radius:7px;background:#fff;cursor:pointer;font-size:13px}
+  .tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .wrap{display:grid;grid-template-columns:minmax(0,1fr) 430px;gap:18px;padding:18px 24px;align-items:start}
+  .viz{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;min-height:200px}
+  .detail{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;
+          position:sticky;top:14px;max-height:calc(100vh - 30px);overflow:auto}
+  .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px}
+  select{font:13px inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:#fff}
+  label.cl{color:var(--mut);font-size:12px}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--mut);margin:6px 0}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:middle}
+  .statline{font-size:12px;color:var(--mut);margin:4px 0 10px}
+  .statline b{color:var(--ink)}
+  svg{display:block;max-width:100%}
+  circle.pt{cursor:pointer}
+  circle.pt:hover{stroke:#000;stroke-width:1.5}
+  .sel{stroke:#000 !important;stroke-width:2.4 !important}
+  .muted{color:var(--mut)}
+  .kv{margin:2px 0}
+  .claim{background:#f0f4f8;border-left:3px solid var(--accent);padding:8px 10px;border-radius:4px;margin:6px 0;
+         font-size:13px;white-space:pre-wrap}
+  .evid{background:#f6f2ec;border-left:3px solid #b9892f;padding:8px 10px;border-radius:4px;margin:6px 0;
+        font-size:13px;white-space:pre-wrap}
+  .pbig{font-size:26px;font-weight:700}
+  .scores{display:grid;grid-template-columns:120px 1fr 38px;gap:5px 8px;align-items:center;margin:8px 0}
+  .bar{height:9px;background:#eee;border-radius:5px;overflow:hidden}
+  .bar>i{display:block;height:100%;background:var(--accent)}
+  .bar.ov>i{background:#16a34a}
+  .dimname{font-size:12px;color:var(--mut)}
+  .reason{white-space:pre-wrap;background:#fafafa;border:1px solid var(--line);border-radius:6px;
+          padding:10px;font-size:13px;max-height:340px;overflow:auto}
+  details{margin:8px 0;border:1px solid var(--line);border-radius:6px;background:#fff}
+  details>summary{cursor:pointer;padding:7px 10px;font-size:12.5px;color:var(--accent);user-select:none}
+  details pre,.promptbox{white-space:pre-wrap;font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
+          background:#fbfbfa;border-top:1px solid var(--line);padding:10px;margin:0;max-height:360px;overflow:auto}
+  h3.sec{font-size:13px;margin:14px 0 4px;color:var(--mut);text-transform:uppercase;letter-spacing:.4px}
+  .cite{font-size:12px;color:#555;font-style:italic;border-left:2px solid #ddd;padding-left:8px;margin:3px 0}
+  .empty{color:var(--mut);padding:40px 10px;text-align:center}
+  .tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:10px;background:#eef;color:#334;margin-left:6px}
+  .mech{font-size:12px;background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;padding:6px 9px;margin:6px 0}
+  .pmtab{display:none}
+  .axislab{font-size:11px;fill:var(--mut)}
+  .gl{stroke:#eee}
+  table.mini{font-size:12px;border-collapse:collapse;margin-top:6px}
+  table.mini td,table.mini th{border:1px solid var(--line);padding:3px 7px;text-align:left}
+</style>
+</head>
+<body>
+<header>
+  <h1>Consistency Training — interactive rollout explorer</h1>
+  <p>Two probes of an 8B model (<b>qwen3-vl-8b-thinking</b>) on genuinely contested, no-ground-truth claims.
+     <b>Phrasing variance</b>: 15 claims × 4 meaning-preserving rephrasings × ~16 rollouts, each scored by an
+     Opus 4.8 cogency-rubric judge. <b>LTP decomposition</b>: 5 hypothesis/evidence questions, each component of
+     the law of total probability sampled 32× (no judge). Click any point to read the chain-of-thought, judge
+     scoring, and the exact prompts.</p>
+  <div class="tabs">
+    <div class="tab active" data-tab="cp">Phrasing variance</div>
+    <div class="tab" data-tab="decomp">LTP decomposition</div>
+    <div class="tab" data-tab="prompts">Prompts &amp; methodology</div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="viz" id="viz"></div>
+  <div class="detail" id="detail"><div class="empty">Click a rollout to inspect its reasoning, judge scoring, and prompts.</div></div>
+</div>
+
+<script id="data" type="application/json">/*__DATA__*/</script>
+<script>
+const D = JSON.parse(document.getElementById('data').textContent);
+const RCOL={R1:'#1f77b4',R2:'#ff7f0e',R3:'#2ca02c',R4:'#d62728'};
+const CCOL={'a_P(H)':'#1f77b4','e_P(E)':'#9467bd','p1_P(H|E)':'#2ca02c','p0_P(H|~E)':'#d62728','implied':'#7f7f7f'};
+const RLAB={'implied':'LTP-implied P(H)','a_P(H)':'a = P(H)  [direct]','e_P(E)':'e = P(E)',
+            'p1_P(H|E)':'p1 = P(H|E)','p0_P(H|~E)':'p0 = P(H|¬E)'};
+const SVGNS='http://www.w3.org/2000/svg';
+let state={tab:'cp', cpq:Object.keys(D.cp_questions)[0], dq:D.decomp_rows.length?Object.keys(D.decomp_questions)[0]:null, mode:'one'};
+
+function el(tag,attrs,kids){const e=document.createElementNS(SVGNS,tag);
+  for(const k in (attrs||{}))e.setAttribute(k,attrs[k]);
+  (kids||[]).forEach(c=>e.appendChild(c));return e;}
+function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function jitter(seed){let h=0;for(const c of seed)h=(h*31+c.charCodeAt(0))%997;return (h/997-0.5);}
+
+// ---------------- tab switching ----------------
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');state.tab=t.dataset.tab;render();});
+
+function render(){
+  const v=document.getElementById('viz');v.innerHTML='';
+  if(state.tab==='cp')renderCP(v);
+  else if(state.tab==='decomp')renderDecomp(v);
+  else renderPrompts(v);
+}
+
+// ================= TAB 1: phrasing variance =================
+function renderCP(v){
+  const qs=Object.keys(D.cp_questions).sort();
+  const ctr=document.createElement('div');ctr.className='controls';
+  ctr.innerHTML=`<label class="cl">Claim</label>`;
+  const sel=document.createElement('select');
+  qs.forEach(q=>{const o=document.createElement('option');o.value=q;
+    o.textContent=`${q}  ·  ${D.cp_questions[q].domain}`;if(q===state.cpq)o.selected=true;sel.appendChild(o);});
+  sel.onchange=()=>{state.cpq=sel.value;render();};
+  ctr.appendChild(sel);v.appendChild(ctr);
+
+  const qid=state.cpq, qs2=D.cp_qstats[qid];
+  const rows=D.cp_rows.filter(r=>r.qid===qid);
+  const sl=document.createElement('div');sl.className='statline';
+  sl.innerHTML=`<b>n=${qs2.n}</b> rollouts · consensus median p=<b>${qs2.median_p.toFixed(2)}</b> ·
+     Spearman(p, judged quality)=<b>${qs2.rho==null?'–':(qs2.rho>=0?'+':'')+qs2.rho.toFixed(2)}</b> ·
+     mean judged quality=<b>${qs2.mean_overall.toFixed(2)}</b>`;
+  v.appendChild(sl);
+
+  const leg=document.createElement('div');leg.className='legend';
+  ['R1','R2','R3','R4'].forEach(r=>leg.innerHTML+=`<span><span class="dot" style="background:${RCOL[r]}"></span>rephrasing ${r}</span>`);
+  leg.innerHTML+=`<span><span class="dot" style="width:14px;height:14px;background:#888;border:1.5px solid #000"></span>larger &amp; ringed = top-quartile quality</span>`;
+  leg.innerHTML+=`<span class="muted">x = probability the model assigned · y = Opus judged reasoning quality · dashed = consensus median</span>`;
+  v.appendChild(leg);
+
+  const W=620,H=470,m={l:54,r:18,t:14,b:46};
+  const xs=p=>m.l+p*(W-m.l-m.r), ys=q=>H-m.b-q*(H-m.b-m.t);
+  const svg=el('svg',{viewBox:`0 0 ${W} ${H}`,width:W,height:H});
+  [0,.25,.5,.75,1].forEach(t=>{
+    svg.appendChild(el('line',{x1:xs(t),y1:m.t,x2:xs(t),y2:H-m.b,class:'gl'}));
+    svg.appendChild(el('line',{x1:m.l,y1:ys(t),x2:W-m.r,y2:ys(t),class:'gl'}));
+    const tx=el('text',{x:xs(t),y:H-m.b+16,'text-anchor':'middle',class:'axislab'});tx.textContent=t;svg.appendChild(tx);
+    const ty=el('text',{x:m.l-8,y:ys(t)+3,'text-anchor':'end',class:'axislab'});ty.textContent=t;svg.appendChild(ty);
+  });
+  const xl=el('text',{x:(m.l+W-m.r)/2,y:H-6,'text-anchor':'middle',class:'axislab'});xl.textContent='probability assigned by model';svg.appendChild(xl);
+  const yl=el('text',{x:14,y:(m.t+H-m.b)/2,'text-anchor':'middle',class:'axislab',transform:`rotate(-90 14 ${(m.t+H-m.b)/2})`});yl.textContent='Opus judged reasoning quality';svg.appendChild(yl);
+  // consensus line
+  svg.appendChild(el('line',{x1:xs(qs2.median_p),y1:m.t,x2:xs(qs2.median_p),y2:H-m.b,stroke:'#999','stroke-dasharray':'4 3'}));
+
+  // favored = top quartile by judged quality (drawn larger + ringed, like the PNGs)
+  const srt=[...rows].sort((a,b)=>a.scores.overall-b.scores.overall);
+  const k=Math.max(4,Math.floor(rows.length/4));
+  const fav=new Set(srt.slice(srt.length-k).map(r=>r.qid+'|'+r.rid+'|'+r.idx));
+  rows.forEach(r=>{
+    const key=r.qid+'|'+r.rid+'|'+r.idx, f=fav.has(key);
+    const c=el('circle',{cx:xs(r.p),cy:ys(r.scores.overall),r:f?8.5:5,fill:RCOL[r.rid],
+      'fill-opacity':f?.9:.55,class:'pt',stroke:f?'#000':'#fff','stroke-width':f?1.4:.6});
+    c.dataset.key=key;
+    c.onclick=()=>{selectCP(r);highlight(c);};
+    svg.appendChild(c);
+  });
+  v.appendChild(svg);
+}
+
+// ================= TAB 2: LTP decomposition =================
+function renderDecomp(v){
+  if(!state.dq){v.innerHTML='<div class="empty">No decomposition data.</div>';return;}
+  const qs=Object.keys(D.decomp_questions);
+  const ctr=document.createElement('div');ctr.className='controls';
+  ctr.innerHTML=`<label class="cl">Question</label>`;
+  const sel=document.createElement('select');
+  qs.forEach(q=>{const o=document.createElement('option');o.value=q;
+    o.textContent=`${q}  ·  E is ${D.decomp_questions[q].role}`;if(q===state.dq)o.selected=true;sel.appendChild(o);});
+  sel.onchange=()=>{state.dq=sel.value;render();};
+  ctr.appendChild(sel);
+  const mm=document.createElement('button');mm.className='tab';mm.style.marginLeft='8px';
+  mm.textContent=state.mode==='map'?'◀ back to strips':'show mechanism map';
+  mm.onclick=()=>{state.mode=state.mode==='map'?'one':'map';render();};
+  ctr.appendChild(mm);
+  v.appendChild(ctr);
+
+  if(state.mode==='map'){renderMechMap(v);return;}
+
+  const qid=state.dq, S=D.decomp_qstats[qid], Q=D.decomp_questions[qid];
+  const cl=document.createElement('div');
+  cl.innerHTML=`<div class="claim"><b>H:</b> ${esc(Q.hypothesis)}</div><div class="evid"><b>E:</b> ${esc(Q.evidence)}</div>`;
+  v.appendChild(cl);
+  const mech=document.createElement('div');mech.className='mech';
+  mech.innerHTML=`<b>mechanism:</b> ${esc(S.mechanism)} &nbsp;·&nbsp; residual (direct − implied)=
+    <b>${S.residual==null?'–':(S.residual>=0?'+':'')+S.residual.toFixed(2)}</b> &nbsp;·&nbsp;
+    Δ(p1−p0)=<b>${(S.delta>=0?'+':'')+S.delta.toFixed(2)}</b> &nbsp;·&nbsp; premise sd[P(E)]=<b>${S.sd_e.toFixed(2)}</b>
+    <br><span class="muted">identity a = p1·e + p0·(1−e); the gap between the implied row and the direct a row is the internal inconsistency.</span>`;
+  v.appendChild(mech);
+
+  const order=['implied','a_P(H)','e_P(E)','p1_P(H|E)','p0_P(H|~E)'];
+  const W=620,H=420,m={l:128,r:18,t:14,b:42};
+  const xs=p=>m.l+p*(W-m.l-m.r);
+  const band=(H-m.t-m.b)/order.length;
+  const yrow=i=>m.t+band*(i+0.5);
+  const svg=el('svg',{viewBox:`0 0 ${W} ${H}`,width:W,height:H});
+  [0,.25,.5,.75,1].forEach(t=>{
+    svg.appendChild(el('line',{x1:xs(t),y1:m.t,x2:xs(t),y2:H-m.b,class:'gl'}));
+    const tx=el('text',{x:xs(t),y:H-m.b+16,'text-anchor':'middle',class:'axislab'});tx.textContent=t;svg.appendChild(tx);
+  });
+  const xl=el('text',{x:(m.l+W-m.r)/2,y:H-6,'text-anchor':'middle',class:'axislab'});xl.textContent='probability assigned by model';svg.appendChild(xl);
+  order.forEach((c,i)=>{
+    const lab=el('text',{x:m.l-10,y:yrow(i)+3,'text-anchor':'end',class:'axislab'});lab.textContent=RLAB[c];svg.appendChild(lab);
+  });
+  // implied subsample + mean X
+  S.implied_sub.forEach((p,k)=>svg.appendChild(el('circle',{cx:xs(p),cy:yrow(0)+jitter('imp'+k)*band*0.8,r:2.4,fill:CCOL.implied,'fill-opacity':.32})));
+  if(S.implied_mean!=null){
+    svg.appendChild(el('line',{x1:xs(S.implied_mean)-6,y1:yrow(0)-6,x2:xs(S.implied_mean)+6,y2:yrow(0)+6,stroke:'#000','stroke-width':2}));
+    svg.appendChild(el('line',{x1:xs(S.implied_mean)-6,y1:yrow(0)+6,x2:xs(S.implied_mean)+6,y2:yrow(0)-6,stroke:'#000','stroke-width':2}));
+  }
+  // residual connector implied(row0) <-> a(row1)
+  if(S.residual!=null){
+    const ya=(yrow(0)+yrow(1))/2;
+    svg.appendChild(el('line',{x1:xs(S.implied_mean),y1:ya,x2:xs(S.a_mean),y2:ya,stroke:'#000','stroke-width':1.2,'marker-end':''}));
+    const rt=el('text',{x:(xs(S.implied_mean)+xs(S.a_mean))/2,y:ya-5,'text-anchor':'middle',class:'axislab'});
+    rt.textContent='residual '+(S.residual>=0?'+':'')+S.residual.toFixed(2);rt.setAttribute('font-weight','700');svg.appendChild(rt);
+  }
+  // component points (ring top-quartile by judged quality, where judged)
+  let anyJudged=false;
+  ['a_P(H)','e_P(E)','p1_P(H|E)','p0_P(H|~E)'].forEach((c,ci)=>{
+    const i=ci+1;
+    const pts=D.decomp_rows.filter(r=>r.qid===qid&&r.component===c);
+    const judged=pts.filter(r=>r.scores&&r.scores.overall!=null);
+    if(judged.length)anyJudged=true;
+    const k=Math.max(2,Math.floor(judged.length/4));
+    const fav=new Set(judged.sort((a,b)=>a.scores.overall-b.scores.overall)
+      .slice(judged.length-k).map(r=>r.idx));
+    pts.forEach(r=>{
+      const f=fav.has(r.idx);
+      const cc=el('circle',{cx:xs(r.p),cy:yrow(i)+jitter(c+r.idx)*band*0.7,r:f?7.5:5,fill:CCOL[c],
+        'fill-opacity':f?.85:.55,class:'pt',stroke:f?'#000':'#fff','stroke-width':f?1.3:.5});
+      cc.dataset.key=qid+'|'+c+'|'+r.idx;
+      cc.onclick=()=>{selectDecomp(r);highlight(cc);};
+      svg.appendChild(cc);
+    });
+    const mn=S.means[c];
+    if(mn!=null)svg.appendChild(el('rect',{x:xs(mn)-5,y:yrow(i)-5,width:10,height:10,fill:CCOL[c],
+      stroke:'#000','stroke-width':1,transform:`rotate(45 ${xs(mn)} ${yrow(i)})`}));
+  });
+  v.appendChild(svg);
+  const note=document.createElement('div');note.className='legend';
+  note.innerHTML=anyJudged
+    ? `<span><span class="dot" style="width:14px;height:14px;background:#888;border:1.5px solid #000"></span>larger &amp; ringed = top-quartile Opus quality within component</span><span class="muted">◆ = component mean · click any point for its judge scoring &amp; CoT</span>`
+    : `<span class="muted">◆ = component mean · click any point for its CoT · (judge scores pending)</span>`;
+  v.appendChild(note);
+}
+
+function renderMechMap(v){
+  const qs=Object.keys(D.decomp_questions);
+  const W=640,H=460,m={l:60,r:140,t:20,b:54};
+  const xs=a=>m.l+(a+1.15)/2.3*(W-m.l-m.r), ys=r=>m.t+(0.5-r)/1.0*(H-m.t-m.b);
+  const svg=el('svg',{viewBox:`0 0 ${W} ${H}`,width:W,height:H});
+  svg.appendChild(el('line',{x1:xs(0),y1:m.t,x2:xs(0),y2:H-m.b,stroke:'#ccc'}));
+  svg.appendChild(el('line',{x1:m.l,y1:ys(0),x2:W-m.r,y2:ys(0),stroke:'#ccc'}));
+  svg.appendChild(el('rect',{x:m.l,y:m.t,width:xs(0)-m.l,height:H-m.t-m.b,fill:'#d62728','fill-opacity':.05}));
+  qs.forEach(q=>{
+    const S=D.decomp_qstats[q];if(S.residual==null)return;
+    const rad=8+S.sd_e*42;
+    const c=el('circle',{cx:xs(S.align),cy:ys(S.residual),r:rad,fill:'#1f77b4','fill-opacity':.4,
+      stroke:'#000','stroke-width':1.2,class:'pt'});
+    c.onclick=()=>{state.dq=q;state.mode='one';render();};
+    svg.appendChild(c);
+    const t=el('text',{x:xs(S.align)+rad+4,y:ys(S.residual)+3,class:'axislab'});t.textContent=q;svg.appendChild(t);
+    const t2=el('text',{x:xs(S.align)+rad+4,y:ys(S.residual)+15,class:'axislab','font-size':'9'});t2.textContent=S.mechanism;svg.appendChild(t2);
+  });
+  ['−1 inverted','0 E-irrelevant','+1 perfect'].forEach((s,i)=>{
+    const a=[-1,0,1][i];const tx=el('text',{x:xs(a),y:H-m.b+16,'text-anchor':'middle',class:'axislab'});tx.textContent=s;svg.appendChild(tx);});
+  const xl=el('text',{x:(m.l+W-m.r)/2,y:H-6,'text-anchor':'middle',class:'axislab'});xl.textContent='direction alignment  Δ·sign(expected)';svg.appendChild(xl);
+  const yl=el('text',{x:16,y:(m.t+H-m.b)/2,'text-anchor':'middle',class:'axislab',transform:`rotate(-90 16 ${(m.t+H-m.b)/2})`});yl.textContent='LTP residual (direct − implied)';svg.appendChild(yl);
+  const cap=document.createElement('div');cap.className='statline';
+  cap.innerHTML='Each bubble is one question; <b>size = premise uncertainty sd[P(E)]</b>. Same residual, different cause: bone_marrow (tiny bubble, certain premise) vs imprecise_credences (big bubble, unknown premise). Click a bubble to open its strips.';
+  v.appendChild(svg);v.appendChild(cap);
+}
+
+// ================= TAB 3: prompts =================
+function renderPrompts(v){
+  const P=D.prompts;
+  v.innerHTML=`
+    <h3 class="sec">Models</h3>
+    <div class="kv">Generator (subject model): <b>${esc(P.gen_model)}</b>, temperature 1.0</div>
+    <div class="kv">Judge: <b>${esc(P.judge_model)}</b>, via the cogency-triad rubric (phrasing-variance only; decomposition is judge-free)</div>
+    <h3 class="sec">Model prompt — phrasing variance (committed-reasoning / "Option B")</h3>
+    <div class="promptbox">${esc(P.gen_template)}</div>
+    <h3 class="sec">Model system prompt — LTP decomposition components</h3>
+    <div class="promptbox">${esc(P.decomp_sys)}</div>
+    <div class="muted" style="font-size:12px;margin-top:4px">Each of the four components gets its own user prompt (a=P(H), e=P(E), p1=P(H|E) "assume E true", p0=P(H|¬E) "assume E false") — view any decomposition rollout to see the exact filled prompt.</div>
+    <h3 class="sec">Judge system prompt (Opus 4.8 cogency rubric)</h3>
+    <div class="promptbox">${esc(P.judge_system)}</div>
+    <h3 class="sec">Judge user wrapper</h3>
+    <div class="promptbox">${esc(P.judge_user_template)}</div>`;
+}
+
+// ================= detail panel =================
+function highlight(node){document.querySelectorAll('circle.sel').forEach(n=>n.classList.remove('sel'));node.classList.add('sel');}
+
+function bar(name,val,ov){
+  const pct=val==null?0:Math.round(val*100);
+  return `<div class="dimname">${name}</div>
+    <div class="bar ${ov?'ov':''}"><i style="width:${pct}%"></i></div>
+    <div style="text-align:right;font-variant-numeric:tabular-nums">${val==null?'–':val.toFixed(2)}</div>`;
+}
+
+function judgeBlock(scores,judge){
+  if(!scores||scores.overall==null) return '';
+  const j=judge||{};
+  let dimrows='';D.dims.forEach(dm=>dimrows+=bar(dm,scores[dm],dm==='overall'));
+  let rationales='';
+  D.dims.forEach(dm=>{const o=j[dm]||{};
+    if(o.rationale||o.citation){
+      rationales+=`<details><summary>${dm} — ${o.score==null?'':o.score}</summary><div class="promptbox">`+
+        (o.citation?`<b>cited span:</b> ${esc(o.citation)}\n\n`:'')+
+        (o.rationale?`${esc(o.rationale)}`:'')+`</div></details>`;}});
+  return `<h3 class="sec">Opus judge scoring</h3><div class="scores">${dimrows}</div>`+
+    (j.overall&&j.overall.rationale?`<div class="cite">${esc(j.overall.rationale)}</div>`:'')+
+    `<h3 class="sec">Per-dimension rationale &amp; cited spans</h3>`+
+    (rationales||'<div class="muted">no parsed judge rationale</div>');
+}
+
+function selectCP(r){
+  const d=document.getElementById('detail');
+  const j=r.judge||{};
+  const genPrompt=D.prompts.gen_template.replace('{CLAIM}',r.text);
+  const judgePrompt=D.prompts.judge_system+"\n\n=====\n\n"+
+    D.prompts.judge_user_template.replace('{CLAIM}',r.text).replace('{CRED}',r.p).replace('{REASONING}',r.reasoning);
+  d.innerHTML=`
+    <div><b>${r.qid}</b> <span class="tag">phrasing variance</span></div>
+    <div class="muted" style="font-size:12px">${r.domain} · rephrasing ${r.rid} · rollout #${r.idx}
+      <span class="dot" style="background:${RCOL[r.rid]}"></span></div>
+    <h3 class="sec">Claim the model answered (${r.rid})</h3>
+    <div class="claim">${esc(r.text)}</div>
+    <h3 class="sec">Model probability</h3>
+    <div class="pbig">${r.p}</div>
+    ${judgeBlock(r.scores,r.judge)}
+    <h3 class="sec">Model reasoning (committed, judged)</h3>
+    <div class="reason">${esc(r.reasoning)}</div>
+    <details><summary>View exact model prompt</summary><div class="promptbox">${esc(genPrompt)}</div></details>
+    <details><summary>View exact judge prompt (system + filled user)</summary><div class="promptbox">${esc(judgePrompt)}</div></details>`;
+  d.scrollTop=0;
+}
+
+function selectDecomp(r){
+  const d=document.getElementById('detail');
+  const Q=D.decomp_questions[r.qid];
+  const prompt=Q.prompts[r.component];
+  d.innerHTML=`
+    <div><b>${r.qid}</b> <span class="tag">LTP decomposition</span></div>
+    <div class="muted" style="font-size:12px">component <b style="color:${CCOL[r.component]}">${esc(r.component)}</b> · E is ${r.role} · rollout #${r.idx}</div>
+    <h3 class="sec">Hypothesis (H)</h3><div class="claim">${esc(Q.hypothesis)}</div>
+    <h3 class="sec">Evidence (E)</h3><div class="evid">${esc(Q.evidence)}</div>
+    <h3 class="sec">Exact component prompt</h3><div class="promptbox">${esc(prompt)}</div>
+    <h3 class="sec">Model probability</h3><div class="pbig">${r.p}</div>
+    ${r.scores&&r.scores.overall!=null
+      ? judgeBlock(r.scores,r.judge)+`<div class="muted" style="font-size:11px;margin-top:4px">Judged against this component's claim framing${(r.component.indexOf('p1')===0||r.component.indexOf('p0')===0)?' (H under the explicit assumption E is '+(r.component.indexOf('p1')===0?'TRUE':'FALSE')+')':''}; the committed <i>content</i> was judged (or the cot tail where content was thin).</div>`
+      : `<div class="muted" style="font-size:12px;margin:6px 0">Not yet judged.</div>`}
+    <h3 class="sec">Model chain-of-thought (raw thinking channel)</h3>
+    <div class="reason">${r.cot?esc(r.cot):'<span class="muted">(no separate thinking-channel text captured for this rollout)</span>'}</div>
+    <h3 class="sec">Committed answer (content)</h3>
+    <div class="reason">${esc(r.content)}</div>`;
+  d.scrollTop=0;
+}
+
+render();
+</script>
+</body>
+</html>
