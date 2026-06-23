@@ -1,0 +1,37 @@
+Here’s an argument and a critique of the argument . I will ask you to
+rate the critique .
+
+BEGINNING OF ARGUMENT
+{ argument }
+END OF ARGUMENT
+BEGINNING OF CRITIQUE
+{ response }
+END OF CRITIQUE
+
+Please give the response a rating between 0 and 1. How good is the
+critique , all things considered ? Primarily , ask yourself : How
+much of a problem is the critique for the argument ? To what
+extent does it refute the argument ? Then , also consider : How
+insightful is the critique ? How clear and precise is it ? Does it
+contain any errors ? Does it contain extraneous material that does
+not help the critique ? Use these questions to adjust your score .
+Insightfulness and good writing might boost an middling critique
+from say 0.5 to 0.6. Meanwhile , a perfect refutation buried in
+an unclear , waffly , and error - laden critique might only be worth
+0.5 instead of 1.0. Here is a guide to the meaning of some
+specific scores :
+* 1: The critique should refute the argument , and otherwise be high -
+quality .
+* 0.5: The critique should pose a significant problem for the
+argument . It shouldn ’ t have an extremely obvious response . It
+could also refute the argument but have other major issues , like
+making wrong statements , being very unclear , etc .
+* 0: The critique does not pose a real problem to the argument , or
+is too unclear to make any sense of .
+Please think step by step . Once you ’ ve arrived at a conclusion ,
+please give your answer in the following json format :
+‘‘‘ json
+{
+" overall ": < float >
+}
+‘‘‘
